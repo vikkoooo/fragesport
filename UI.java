@@ -1,272 +1,249 @@
 package fragesport;
 
-import java.util.ArrayList;
-import java.util.Random;
 import java.util.Scanner;
 
 /**
- * @author viktorlundberg
- *
+ * Programmering i Java, DA556B. Projekt
+ * 
+ * Console UI class for the quiz game
+ * 
+ * @author Viktor Lundberg, viktor.lundberg0026@stud.hkr.se
+ * @date 2021-05-18
  */
 
-public class UI
-{
+public class UI {
+	
 	// Variables
-	Scanner myScan;
-	DataHandler data;
-
-	// Temp lists
-	ArrayList<Question> currentQuestions;
-	ArrayList<Question> history;
-
-	// Score
-	int correct;
-	int wrong;
+	private Scanner myScan;
+	private Logic logic;
 
 	/**
-	 * Starts program
+	 * Starts console UI for the quiz game.
+	 * 
+	 * @param filePath, the .csv file we want to load our "database" from
 	 */
-	public void run(String filePath)
-	{
+	public void run(String filePath) {
+		
 		// Initialize variables
 		myScan = new Scanner(System.in);
-		data = new DataHandler();
-		correct = 0;
-		wrong = 0;
 
-		try
-		{
-			// Load and sort data
-			data.loadData(filePath);
-			data.sortData(data.database);
-
-			currentQuestions = new ArrayList<>(data.database.size());
-			history = new ArrayList<>(data.database.size());
-			currentQuestions.addAll(data.database);
-		}
-		catch (Exception e)
-		{
-			System.err.println(e.getMessage());
-		}
-		finally
-		{
-			System.out.println();
+		try {
+			logic = new Logic(filePath);
 			menu();
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
 		}
 	}
 
 	/**
-	 * Menu
+	 * Console Menu
 	 */
-	private void menu()
-	{
-		int choice = 0;
-
+	private void menu() {
+		
 		//@formatter:off
+		System.out.println();
 		System.out.println(
 				"Menu \n"
-				+ "1) List all questions with answers \n"
-				+ "2) Play one question \n"
-				+ "3) Play x number of random questions \n"
-				+ "4) See current score \n"
-				+ "5) See played questions \n"
-				+ "6) Restart (reset score and questions database) \n"
+				+ "1) Play one random question \n"
+				+ "2) Play x number of random questions \n"
+				+ "3) See current score \n"
+				+ "4) See played questions \n"
+				+ "5) Restart (reset score and questions database) \n"
 				+ "7) Help me! \n"
-				+ "8) Test \n"
+				+ "8) List all questions with answers (CHEATMODE) \n"
 				+ "9) Exit program\n");
 		//@formatter:on
 
+		// Get input from user
+		int choice = 0;
 		System.out.print("Choice: ");
 
-		try
-		{
+		try {
 			choice = Integer.parseInt(myScan.nextLine());
 			System.out.println();
-		}
-		catch (NumberFormatException e)
-		{
-			System.err.println("Please enter 1 - 9 as input only");
+		} catch (NumberFormatException e) {
+			System.out.println("Please enter 1 - 5 and 7 - 9 as input only");
 			menu();
 		}
 
-		switch (choice)
-		{
+		// Will invoke one of the options depending of user choice
+		switch (choice) {
 		case 1:
-			listAll();
-			break;
-		case 2:
 			play(1);
+			menu();
 			break;
-		case 3:
+
+		case 2:
 			System.out.print("Enter how many questions you want to play: ");
-			int m = Integer.parseInt(myScan.nextLine());
-			play(m);
+			int n = Integer.parseInt(myScan.nextLine());
+			play(n);
+			menu();
 			break;
+
+		case 3:
+			printCurrentScore();
+			menu();
+			break;
+
 		case 4:
-			currentScore(true);
+			printHistory();
+			menu();
 			break;
+
 		case 5:
-			history();
-			break;
-		case 6:
 			restart();
+			menu();
 			break;
+
 		case 7:
 			help();
+			menu();
 			break;
+
 		case 8:
-			test();
+			printRemainingQuestions();
+			menu();
 			break;
+
 		case 9:
 			exit();
 			break;
+
 		default:
-			System.err.println("Please enter 1 - 9 as input only");
+			System.out.println("Please enter 1 - 5 and 7 - 9 as input only");
 			menu();
 		}
 	}
 
 	/**
+	 * Play one random question. This method is recursive, meaning when calling
+	 * this method, choose how many questions you want to run.
 	 * 
+	 * @param n, number of questions to run
+	 * @return n, the remaining number of questions to run recursive
 	 */
-	private void listAll()
-	{
-		for (Question e : currentQuestions)
-		{
-			System.out.println(e.toString());
-		}
-		System.out.println();
-		menu();
-	}
-
-	private int randQuestion()
-	{
-		Random rand = new Random();
-		int nextQuestion = rand.nextInt(currentQuestions.size());
-
-		return nextQuestion;
-	}
-
-	private int play(int n)
-	{
-		if (n == 0)
-		{
+	private int play(int n) {
+		
+		// Base case
+		if (n == 0) {
 			menu();
 			return 0;
-		}
-		else
-		{
-			int index = randQuestion();
-			Question question = currentQuestions.get(index);
+		} else {
+			// Get a question from logic
+			Question question = logic.getRandomQuestion();
 
-			System.out.println("Question number " + index + ") \n" + question.getQuestion());
+			// Print question
+			System.out.println("Question number " + question.getId() + ") \n" + question.getQuestion());
 			System.out.println();
 			System.out.println("1) " + question.getAnswer1());
 			System.out.println("2) " + question.getAnswer2());
 			System.out.println("3) " + question.getAnswer3());
 			System.out.println("4) " + question.getAnswer4());
 
+			// Get the correct answer (print is optional)
 			String correctAnswer = question.getCorrectAnswer();
 			System.out.println("\n(CHEATMODE) - Correct answer: " + correctAnswer);
 
+			// Find out which is the correct alternative
 			int correctAlternative = 0;
 
-			if (correctAnswer.equals(question.getAnswer1()))
-			{
+			if (correctAnswer.equals(question.getAnswer1())) {
 				correctAlternative = 1;
 			}
-			if (correctAnswer.equals(question.getAnswer2()))
-			{
+			if (correctAnswer.equals(question.getAnswer2())) {
 				correctAlternative = 2;
 			}
-			if (correctAnswer.equals(question.getAnswer3()))
-			{
+			if (correctAnswer.equals(question.getAnswer3())) {
 				correctAlternative = 3;
 			}
-			if (correctAnswer.equals(question.getAnswer4()))
-			{
+			if (correctAnswer.equals(question.getAnswer4())) {
 				correctAlternative = 4;
 			}
 
+			// (Optional code) print the correct alternative
 			System.out.println("(CHEATMODE) - Correct alternative: " + correctAlternative);
 			System.out.println();
 
-			// Om selected svar från användare == correct svar enligt fråga, poäng
+			// Checks user answer
 			System.out.print("Answer: ");
 			int userAnswer = Integer.parseInt(myScan.nextLine());
 
-			if (userAnswer == correctAlternative)
-			{
-				correct++;
+			if (userAnswer == correctAlternative) {
+				logic.correct();
 				System.out.println("Correct!");
-			}
-			else
-			{
-				wrong++;
+			} else {
+				logic.wrong();
 				System.out.println("Wrong!");
 			}
-
-			history.add(question);
-			currentQuestions.remove(index);
-			System.out.println();
-			currentScore(false);
+			// Show score after each question
+			printCurrentScore();
 		}
-
+		// Call remaining number of questions recursive
 		return play(n - 1);
 	}
 
-	private void currentScore(boolean menu)
-	{
+	/**
+	 * Prints current score. Correct answers, wrong answer, how many questions we
+	 * played and how many is remaining.
+	 */
+	private void printCurrentScore() {
 		System.out.println("Current score");
-		System.out.println("Correct answers: " + correct);
-		System.out.println("Wrong answers: " + wrong);
-		System.out.println("Questions played: " + history.size());
-		System.out.println("Questions remaining: " + currentQuestions.size());
-		System.out.println();
+		System.out.println("Correct answers: " + logic.getCorrect());
+		System.out.println("Wrong answers: " + logic.getWrong());
+		System.out.println("Questions played: " + logic.getHistory().size());
+		System.out.println("Questions remaining: " + logic.getCurrentQuestions().size());
+	}
 
-		if (menu == true)
-		{
-			menu();
+	/**
+	 * Prints history, which questions have we already played?
+	 */
+	private void printHistory() {
+		if (logic.getHistory().isEmpty()) {
+			System.out.println("History is empty");
+		} else {
+			for (Question e : logic.getHistory()) {
+				System.out.println(e.toString());
+			}
 		}
 	}
 
-	private void history()
-	{
-		for (Question e : history)
-		{
+	/**
+	 * Restart the game. Reset score, database and history.
+	 */
+	private void restart() {
+		logic.reset();
+
+		System.out.println(
+				"Resetted. Added " + logic.getCurrentQuestions().size() + " questions from database to game client");
+		System.out.println();
+		printCurrentScore();
+	}
+
+	/**
+	 * Help text to the user who might be confused
+	 */
+	private void help() {
+		System.out.println("Start the quiz from MainQuiz.java where you call the UI.run() method");
+		System.out.println("In the console UI buttons 1-5 are game friendly, and 7-9 other options.");
+		System.out.println("By default the game will print correct answers as well, this is to easier");
+		System.out.println("understand that all the functions work. In the live version of the program");
+		System.out.println("this is obviously disabled.");
+		System.out.println("System will give you random questions and keep track of score, until you reset the score.");
+	}
+
+	/**
+	 * Prints all questions remaining in the "database".
+	 */
+	private void printRemainingQuestions() {
+		for (Question e : logic.getCurrentQuestions()) {
 			System.out.println(e.toString());
 		}
-		System.out.println();
-		menu();
 	}
 
-	private void restart()
-	{
-		currentQuestions.clear();
-		history.clear();
-		currentQuestions.addAll(data.database);
-		correct = 0;
-		wrong = 0;
-		System.out.println("Resetted. Added " + data.database.size() + " questions from database to game client");
-		System.out.println();
-		menu();
-	}
-
-	private void help()
-	{
-		System.out.println("Insert text to help user here");
-		System.out.println();
-		menu();
-	}
-
-	private void test()
-	{
-		System.out.println("test method start");
-		menu();
-	}
-
-	private void exit()
-	{
+	/**
+	 * Exit the program, close scanner.
+	 */
+	private void exit() {
 		myScan.close();
 		System.out.println("Closing program..");
 	}
